@@ -54,13 +54,23 @@ function vlqEncode(value: number): string {
   return result;
 }
 
-class MappedChar {
-  constructor(
-    readonly char: string,
-    readonly file: SourceFile = null,
-    readonly line: number = null,
-    readonly column: number = null
-  ) {}
+interface MapPos {
+  file?: SourceFile;
+  line?: number;
+  column?: number;
+}
+
+class MappedChar implements MapPos {
+  readonly char: string;
+  readonly file?: SourceFile;
+  readonly line?: number;
+  readonly column?: number;
+
+  constructor(char: string, { file, line, column }: MapPos = {}) {
+    this.char = char;
+    (this.file = file), (this.line = line);
+    this.column = column;
+  }
 }
 
 class SourceFile {
@@ -71,7 +81,7 @@ class SourceFile {
     let line = 0,
       column = 0;
     for (const char of content) {
-      chars.push(new MappedChar(char, this, line, column));
+      chars.push(new MappedChar(char, { file: this, line, column }));
       if (char === "\n") {
         line++;
         column = 0;
@@ -144,9 +154,10 @@ class MappedString {
           !(
             srcIndex === lastSrcIndex &&
             char.line === lastSrcLine &&
-            char.column - lastSrcCol === genCol - lastGenCol
+            char.column === lastSrcCol
           )
         ) {
+          if (firstOfLine) console.log("LINE: ", genCol, lastGenCol, char.char);
           firstOfLine = false;
 
           if (/[^;]$/.test(mappings)) {
@@ -187,17 +198,22 @@ class MappedString {
   }
 
   getInlineSourceMap(): string {
-    return "//@ sourceMappingURL=data:application/json;charset=utf-8;base64," +
-      new Buffer(JSON.stringify(this.getSourceMap())).toString("base64");
+    console.log(this.getSourceMap());
+    return (
+      "//@ sourceMappingURL=data:application/json;charset=utf-8;base64," +
+      new Buffer(JSON.stringify(this.getSourceMap())).toString("base64")
+    );
   }
 
   static EMPTY = new MappedString();
 
-  static convert(str: MappedStringLike): MappedString {
+  static convert(str: MappedStringLike, pos: MapPos = {}): MappedString {
     if (str instanceof MappedString) {
       return str;
     } else {
-      return new MappedString(str);
+      return new MappedString(
+        Array.from(str).map(char => new MappedChar(char, pos))
+      );
     }
   }
 }
@@ -242,7 +258,8 @@ class SourceEditor {
   }
 
   replace(start, end, str: MappedStringLike): void {
-    this.index[start] = MappedString.convert(str);
+    const pos: MapPos | undefined = this.index[start].chars[0];
+    this.index[start] = MappedString.convert(str, pos);
 
     for (let i = start + 1; i < end; i++) {
       this.index[i] = MappedString.EMPTY;
@@ -250,12 +267,15 @@ class SourceEditor {
   }
 
   insertBefore({ start }, str: MappedStringLike): void {
-    const mstr = MappedString.convert(str);
+    const pos: MapPos | undefined = this.index[start].chars[0];
+    console.log("pos: ", pos);
+    const mstr = MappedString.convert(str, pos);
     this.index[start] = mstr.concat(this.index[start]);
   }
 
   insertAfter({ end }, str: MappedStringLike): void {
-    const mstr = MappedString.convert(str);
+    const pos: MapPos | undefined = this.index[end - 1].chars.slice(-1)[0];
+    const mstr = MappedString.convert(str, pos);
     this.index[end - 1] = this.index[end - 1].concat(mstr);
   }
 }
@@ -489,7 +509,11 @@ export function transpile(src: string, name: string = null): string {
   const mappedStr = edit.merge();
   let transpiledSource = mappedStr.toString();
   if (name != null) {
-    transpiledSource += "\n" + mappedStr.getInlineSourceMap();
+    transpiledSource +=
+      "\n" +
+      mappedStr.getInlineSourceMap() +
+      "\n" +
+      "//# sourceURL=transpiled.js";
   }
   console.log(transpiledSource);
   return transpiledSource;
