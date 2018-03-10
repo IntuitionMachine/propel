@@ -116,6 +116,7 @@ process.on("unhandledRejection", e => { throw e; });
   run.mkdir("build");
   run.mkdir("build/website");
   run.mkdir("build/website/docs");
+  run.mkdir("build/website/references");
   run.mkdir("build/website/notebook");
   run.mkdir("build/website/src"); // Needed for npy_test
 
@@ -138,7 +139,4 @@ process.on("unhandledRejection", e => { throw e; });
   await writePages();
 
   console.log("Website built in", websiteRoot);
-
-  // Firebase keeps network connections open, so we have force exit the process.
-  process.exit(0);
 })();

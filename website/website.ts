@@ -76,7 +76,7 @@ export const PropelIndex = (props) => {
 };
 
 const ReferencesFooter = () =>
-  div("footer", link("references.html", "References"));
+  div("footer", link("/references", "References"));
 
 const Splash = (props) =>
   div("splash",
@@ -276,7 +276,7 @@ export const pages: Page[] = [
   },
   {
     title: "Propel References",
-    path: "website/references.html",
+    path: "website/references/index.html",
     root: References,
     route: /^\/references/,
   },
