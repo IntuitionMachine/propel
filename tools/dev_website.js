@@ -9,6 +9,8 @@ const Bundler = require("parcel-bundler");
 require("ts-node").register({"typeCheck": true });
 const gendoc = require("./gendoc.ts");
 
+const prod = (process.argv.indexOf("prod") >= 0);
+
 (async() => {
   run.mkdir("build");
   run.mkdir("build/website");  // for docs.json
@@ -27,9 +29,9 @@ const gendoc = require("./gendoc.ts");
     cache: true,
     hmr: false,
     logLevel: process.env.CI ? 1 : null,
-    minify: false,
+    minify: prod,
     outDir: "build/dev_website/",
-    production: false,
+    production: prod,
     publicUrl: "/",
     watch: true
   }
