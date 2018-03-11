@@ -32,10 +32,10 @@ import { SandboxRPC } from "./sandbox_rpc";
 const cellTable = new Map<number, Cell>(); // Maps id to Cell.
 let nextCellId = 1;
 
-let prerenderedOutputs = new Map<number, string>();
+const prerenderedOutputs = new Map<number, string>();
 
 export function registerPrerenderedOutput(output) {
-  let cellId = Number(output.id.replace("output", ""));
+  const cellId = Number(output.id.replace("output", ""));
   prerenderedOutputs.set(cellId, output.innerHTML);
 }
 
@@ -174,13 +174,15 @@ export class Cell extends Component<CellProps, CellState> {
     super(props);
     this.id = nextCellId++;
     if (prerenderedOutputs.has(this.id)) {
-      this.outputHTML = prerenderedOutputs.get(this.id)
+      this.outputHTML = prerenderedOutputs.get(this.id);
     }
     cellTable.set(this.id, this);
   }
 
   componentWillMount() {
-    cellExecuteQueue.push(this);
+    if (!this.outputHTML) {
+      cellExecuteQueue.push(this);
+    }
   }
 
   get code(): string {
@@ -346,18 +348,17 @@ export class Cell extends Component<CellProps, CellState> {
     }
 
     // If supplied outputHTML, use that in the output div.
-    let outputDivAttr = {
+    const outputDivAttr = {
             "class": "output",
             "id": "output" + this.id,
             "ref": (ref => { this.output = ref; }),
-          }
+          };
     if (this.outputHTML) {
-      debugger;
       outputDivAttr["dangerouslySetInnerHTML"] = {
         __html: this.outputHTML,
-      }
+      };
     }
-    let outputDiv = h("div", outputDivAttr);
+    const outputDiv = h("div", outputDivAttr);
 
     return h("div", {
         "class": "notebook-cell",
